@@ -198,20 +198,22 @@ function updateArrivalPhase(aircraft: Aircraft, state: SimulationState): Partial
 
 function updateDeparturePhase(aircraft: Aircraft, state: SimulationState): Partial<Aircraft> & { newMsg?: string } {
   let updates: Partial<Aircraft> & { newMsg?: string } = {};
-  const exitFix = randomFrom(DEPARTURE_FIXES);
 
   switch (aircraft.phase) {
     case 'lining_up': {
       if (aircraft.clearedTakeoff) {
+        // Begin takeoff roll — high acceleration so it becomes visible fast
         updates.phase = 'takeoff';
-        updates.targetSpeed = 160;
-        updates.targetAltitude = 500;
+        updates.targetSpeed = 180;
+        updates.targetAltitude = 200;
         updates.newMsg = `${aircraft.callsign}, rolling runway ${aircraft.assignedRunway}.`;
       }
       break;
     }
     case 'takeoff': {
-      if (aircraft.speed > 80) {
+      // Skip long runway roll (not visible at radar scale) — go airborne at 30kt
+      if (aircraft.speed >= 30) {
+        const exitFix = randomFrom(DEPARTURE_FIXES);
         updates.phase = 'climbing';
         updates.targetAltitude = 10000;
         updates.targetSpeed = 250;

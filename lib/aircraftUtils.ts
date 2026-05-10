@@ -69,20 +69,22 @@ export function generateCallsign(prefix: string): string {
   return `${prefix}${num}`;
 }
 
-// Speed in knots → pixels per second at 1x speed
-// Assumption: 1 radar unit ≈ 0.5 NM → 250 pixels = 125 NM
-// 1 knot = 1 NM/hr = 1/3600 NM/s → at 250 px/125 NM = 2 px/NM
-// So 1 knot = 2/3600 px/s ≈ 0.000556 px/s
-export const KNOTS_TO_PX_PER_SEC = 2 / 3600;
+// Scale: 1 px ≈ 0.025 NM for gameplay feel. At 250kt: ~2.8 px/s → visible movement.
+// Arrivals cross ~400px in ~2.5 min at 1x. At 5x: ~30 seconds. Feels right.
+export const KNOTS_TO_PX_PER_SEC = 40 / 3600; // ~20x real scale for playability
 
 export function moveAircraft(aircraft: Aircraft, dt: number, timeSpeed: number): Partial<Aircraft> {
   const effectiveDt = dt * timeSpeed;
 
-  // Gradual heading change: max 3° per second
+  // Heading turns: 3°/s
   const newHeading = turnToward(aircraft.heading, aircraft.targetHeading, 3 * effectiveDt);
 
-  // Gradual speed change: max 5 kts per second
-  const newSpeed = approachValue(aircraft.speed, aircraft.targetSpeed, 5 * effectiveDt);
+  // Speed change — faster during takeoff/climb so departure roll is visible
+  const speedRate =
+    aircraft.phase === 'takeoff' || aircraft.phase === 'lining_up' ? 40 :
+    aircraft.phase === 'climbing' ? 15 :
+    8; // kt/s
+  const newSpeed = approachValue(aircraft.speed, aircraft.targetSpeed, speedRate * effectiveDt);
 
   // Gradual altitude change based on phase
   let climbRate = 2000; // fpm
