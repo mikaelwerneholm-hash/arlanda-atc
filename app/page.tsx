@@ -9,6 +9,7 @@ import RadioLog from '@/components/RadioLog';
 import StatusBar from '@/components/StatusBar';
 import WelcomeModal from '@/components/WelcomeModal';
 import HelpToast from '@/components/HelpToast';
+import ActionQueue from '@/components/ActionQueue';
 
 export default function ATCPage() {
   const sim = useSimulation();
@@ -106,12 +107,21 @@ export default function ATCPage() {
 
         {/* Right panels */}
         <div className="flex flex-col gap-1 w-64 shrink-0">
+
+          {/* Action queue — always visible, shows what needs doing */}
+          <div className="shrink-0">
+            <ActionQueue
+              state={sim.state}
+              onSelectAircraft={sim.selectAircraft}
+            />
+          </div>
+
           {/* Aircraft control panel */}
           {showAircraftPanel && (
-            <div className="flex flex-col h-[55%] min-h-0">
+            <div className="flex flex-col flex-1 min-h-0">
               <div className="flex items-center justify-between px-1 py-0.5">
                 <span className="text-[9px] font-mono text-slate-500 uppercase tracking-widest">
-                  {sim.selectedAircraft ? sim.selectedAircraft.callsign : 'Selected A/C'}
+                  {sim.selectedAircraft ? sim.selectedAircraft.callsign : 'Valt flygplan'}
                 </span>
                 <button
                   onClick={() => setShowAircraftPanel(false)}
