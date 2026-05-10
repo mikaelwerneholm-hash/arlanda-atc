@@ -1,11 +1,18 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { SimulationState, TrafficLevel, TimeSpeed, Aircraft } from '@/lib/types';
+import type { SimulationState, TrafficLevel, TimeSpeed, RadioMessage } from '@/lib/types';
 import { createInitialState, tickSimulation } from '@/lib/simulationEngine';
 import { buildAtcMessage } from '@/lib/radioMessages';
 import { normalizeHeading } from '@/lib/aircraftUtils';
 
-const TICK_MS = 100; // 10 ticks per second
+function mkMsg(
+  simTime: number,
+  callsign: string,
+  message: string,
+  type: RadioMessage['type']
+): RadioMessage {
+  return { id: `msg_${Date.now()}_${Math.random()}`, timestamp: simTime, callsign, message, type };
+}
 
 export function useSimulation() {
   const [state, setState] = useState<SimulationState>(createInitialState);
@@ -65,13 +72,10 @@ export function useSimulation() {
     }));
   }, []);
 
-  const addRadioMessage = useCallback((callsign: string, message: string, type: 'atc' | 'pilot' | 'system') => {
+  const addRadioMessage = useCallback((callsign: string, message: string, type: RadioMessage['type']) => {
     setState((s) => ({
       ...s,
-      radioLog: [
-        ...s.radioLog,
-        { id: `msg_${Date.now()}`, timestamp: s.simTime, callsign, message, type },
-      ].slice(-80),
+      radioLog: [...s.radioLog, mkMsg(s.simTime, callsign, message, type)].slice(-80),
     }));
   }, []);
 
@@ -87,13 +91,7 @@ export function useSimulation() {
         aircraft: s.aircraft.map((a) =>
           a.id === aircraftId ? { ...a, targetHeading: h } : a
         ),
-        radioLog: [...s.radioLog, {
-          id: `msg_${Date.now()}`,
-          timestamp: s.simTime,
-          callsign: ac.callsign,
-          message: msg,
-          type: 'atc',
-        }].slice(-80),
+        radioLog: [...s.radioLog, mkMsg(s.simTime, ac.callsign, msg, 'atc')].slice(-80),
       };
     });
   }, []);
@@ -108,13 +106,7 @@ export function useSimulation() {
         aircraft: s.aircraft.map((a) =>
           a.id === aircraftId ? { ...a, targetAltitude: altitude } : a
         ),
-        radioLog: [...s.radioLog, {
-          id: `msg_${Date.now()}`,
-          timestamp: s.simTime,
-          callsign: ac.callsign,
-          message: msg,
-          type: 'atc',
-        }].slice(-80),
+        radioLog: [...s.radioLog, mkMsg(s.simTime, ac.callsign, msg, 'atc')].slice(-80),
       };
     });
   }, []);
@@ -129,13 +121,7 @@ export function useSimulation() {
         aircraft: s.aircraft.map((a) =>
           a.id === aircraftId ? { ...a, targetSpeed: speed } : a
         ),
-        radioLog: [...s.radioLog, {
-          id: `msg_${Date.now()}`,
-          timestamp: s.simTime,
-          callsign: ac.callsign,
-          message: msg,
-          type: 'atc',
-        }].slice(-80),
+        radioLog: [...s.radioLog, mkMsg(s.simTime, ac.callsign, msg, 'atc')].slice(-80),
       };
     });
   }, []);
@@ -150,13 +136,7 @@ export function useSimulation() {
         aircraft: s.aircraft.map((a) =>
           a.id === aircraftId ? { ...a, clearedApproach: true, assignedRunway: s.activeRunwayArr } : a
         ),
-        radioLog: [...s.radioLog, {
-          id: `msg_${Date.now()}`,
-          timestamp: s.simTime,
-          callsign: ac.callsign,
-          message: msg,
-          type: 'atc',
-        }].slice(-80),
+        radioLog: [...s.radioLog, mkMsg(s.simTime, ac.callsign, msg, 'atc')].slice(-80),
       };
     });
   }, []);
@@ -175,13 +155,7 @@ export function useSimulation() {
         aircraft: s.aircraft.map((a) =>
           a.id === aircraftId ? { ...a, clearedTakeoff: true, phase: 'lining_up' } : a
         ),
-        radioLog: [...s.radioLog, {
-          id: `msg_${Date.now()}`,
-          timestamp: s.simTime,
-          callsign: ac.callsign,
-          message: msg,
-          type: 'atc',
-        }].slice(-80),
+        radioLog: [...s.radioLog, mkMsg(s.simTime, ac.callsign, msg, 'atc')].slice(-80),
       };
     });
   }, []);
@@ -207,13 +181,7 @@ export function useSimulation() {
               }
             : a
         ),
-        radioLog: [...s.radioLog, {
-          id: `msg_${Date.now()}`,
-          timestamp: s.simTime,
-          callsign: ac.callsign,
-          message: msg,
-          type: 'atc',
-        }].slice(-80),
+        radioLog: [...s.radioLog, mkMsg(s.simTime, ac.callsign, msg, 'atc')].slice(-80),
       };
     });
   }, []);
