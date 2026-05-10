@@ -9,47 +9,56 @@ interface FlightListProps {
   onSelect: (id: string) => void;
 }
 
+// Swedish labels per phase — makes the game understandable for non-ATC users
+const PHASE_LABELS: Record<string, { sv: string; style: string }> = {
+  descending:    { sv: 'Sjunker',       style: 'bg-cyan-900/40 text-cyan-400' },
+  approach:      { sv: 'Inflygning',    style: 'bg-blue-900/40 text-blue-400' },
+  final:         { sv: '→ Final',       style: 'bg-green-800/60 text-green-200' },
+  landing:       { sv: '↓ Landar',      style: 'bg-green-700/70 text-white' },
+  landed:        { sv: 'Landat',        style: 'bg-slate-800 text-slate-500' },
+  climbing:      { sv: 'Stiger',        style: 'bg-amber-900/40 text-amber-400' },
+  departing:     { sv: 'Avgående',      style: 'bg-amber-900/60 text-amber-300' },
+  takeoff:       { sv: '↑ Lyfter!',     style: 'bg-yellow-700/60 text-yellow-100' },
+  lining_up:     { sv: 'Rullar in',     style: 'bg-yellow-900/60 text-yellow-300' },
+  holding_short: { sv: '⚡ Väntar start', style: 'bg-orange-800/60 text-orange-200 animate-pulse' },
+  enroute:       { sv: 'På väg',        style: 'bg-slate-800 text-slate-400' },
+  left_sector:   { sv: 'Lämnat',        style: 'bg-slate-900 text-slate-600' },
+};
+
 function PhaseChip({ phase }: { phase: string }) {
-  const styles: Record<string, string> = {
-    descending: 'bg-cyan-900/40 text-cyan-400',
-    approach:   'bg-blue-900/40 text-blue-400',
-    final:      'bg-green-900/40 text-green-300',
-    landing:    'bg-green-900/60 text-green-200',
-    landed:     'bg-slate-800 text-slate-500',
-    climbing:   'bg-amber-900/40 text-amber-400',
-    departing:  'bg-amber-900/60 text-amber-300',
-    takeoff:    'bg-yellow-900/40 text-yellow-400',
-    lining_up:  'bg-yellow-900/60 text-yellow-300',
-    holding_short: 'bg-orange-900/40 text-orange-400',
-    enroute:    'bg-slate-800 text-slate-400',
-    left_sector:'bg-slate-900 text-slate-600',
-  };
+  const info = PHASE_LABELS[phase] ?? { sv: phase, style: 'bg-slate-800 text-slate-400' };
   return (
-    <span className={`text-[8px] font-mono uppercase px-1 py-0.5 rounded ${styles[phase] ?? 'bg-slate-800 text-slate-400'}`}>
-      {phase.replace('_', ' ')}
+    <span className={`text-[8px] font-mono px-1 py-0.5 rounded whitespace-nowrap ${info.style}`}>
+      {info.sv}
     </span>
   );
 }
 
 function AircraftRow({ ac, selected, onSelect }: { ac: Aircraft; selected: boolean; onSelect: () => void }) {
   const isConflict = ac.conflictAlert;
+  const needsAction = ac.phase === 'holding_short' || (ac.type === 'ARR' && ac.phase === 'approach' && !ac.clearedApproach);
   return (
     <div
       onClick={onSelect}
       className={`
-        flex items-center gap-2 px-2 py-1.5 cursor-pointer rounded text-xs font-mono
+        flex flex-col px-2 py-1.5 cursor-pointer
         border-b border-slate-800/50 hover:bg-slate-800/40 transition-colors
-        ${selected ? 'bg-slate-700/50 border-l-2 border-l-cyan-500' : ''}
-        ${isConflict ? 'bg-red-950/30 animate-pulse' : ''}
+        ${selected ? 'bg-slate-700/50 border-l-2 border-l-cyan-400' : ''}
+        ${isConflict ? 'bg-red-950/30' : ''}
+        ${needsAction && !selected ? 'border-l-2 border-l-amber-500' : ''}
       `}
     >
-      <div className="w-20 text-white font-bold truncate">{ac.callsign}</div>
-      <div className="w-10 text-slate-400 text-[9px]">{ac.aircraftType}</div>
-      <div className="w-16 text-cyan-400">{formatAltitude(ac.altitude)}</div>
-      <div className="flex-1">
-        <PhaseChip phase={ac.phase} />
+      <div className="flex items-center gap-2">
+        <div className="text-white font-bold font-mono text-xs">{ac.callsign}</div>
+        <div className="text-slate-500 font-mono text-[9px]">{ac.aircraftType}</div>
+        {isConflict && <span className="text-red-400 text-xs ml-auto">⚠</span>}
       </div>
-      {isConflict && <span className="text-red-400 text-[10px]">⚠</span>}
+      <div className="flex items-center gap-2 mt-0.5">
+        <PhaseChip phase={ac.phase} />
+        {needsAction && !isConflict && (
+          <span className="text-amber-400 text-[8px] font-mono ml-auto">← klicka!</span>
+        )}
+      </div>
     </div>
   );
 }

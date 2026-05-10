@@ -1,20 +1,34 @@
 'use client';
 import React, { useState } from 'react';
 import { useSimulation } from '@/hooks/useSimulation';
+import { useHelpSystem } from '@/hooks/useHelpSystem';
 import RadarView from '@/components/RadarView';
 import AircraftPanel from '@/components/AircraftPanel';
 import FlightList from '@/components/FlightList';
 import RadioLog from '@/components/RadioLog';
 import StatusBar from '@/components/StatusBar';
+import WelcomeModal from '@/components/WelcomeModal';
+import HelpToast from '@/components/HelpToast';
 
 export default function ATCPage() {
   const sim = useSimulation();
+  const [showWelcome, setShowWelcome] = useState(true);
   const [showFlightList, setShowFlightList] = useState(true);
   const [showAircraftPanel, setShowAircraftPanel] = useState(true);
   const [showRadioLog, setShowRadioLog] = useState(true);
+  const { currentTip, dismissTip } = useHelpSystem(sim.state);
+
+  const handleStartGame = () => {
+    setShowWelcome(false);
+    sim.toggleRunning();
+  };
 
   return (
     <div className="flex flex-col h-screen bg-[#020817] text-slate-300 overflow-hidden">
+
+      {/* Welcome modal — shown on first load */}
+      {showWelcome && <WelcomeModal onStart={handleStartGame} />}
+
       {/* Status bar */}
       <StatusBar
         state={sim.state}
@@ -80,11 +94,13 @@ export default function ATCPage() {
             </div>
           )}
 
-          <div className="flex-1 min-h-0">
+          <div className="flex-1 min-h-0 relative">
             <RadarView
               state={sim.state}
               onSelectAircraft={sim.selectAircraft}
             />
+            {/* Contextual help toasts — appear over the radar */}
+            <HelpToast tip={currentTip} onDismiss={dismissTip} />
           </div>
         </div>
 

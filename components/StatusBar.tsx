@@ -44,17 +44,27 @@ export default function StatusBar({
 
       <div className="w-px h-4 bg-slate-700" />
 
-      {/* Play/Pause */}
-      <button
-        onClick={onToggleRunning}
-        className={`px-2 py-0.5 rounded border font-bold text-xs transition-colors ${
-          state.running
-            ? 'bg-red-900/50 border-red-700 text-red-300 hover:bg-red-800/60'
-            : 'bg-green-900/50 border-green-700 text-green-300 hover:bg-green-800/60'
-        }`}
-      >
-        {state.running ? '⏸ PAUSE' : '▶ START'}
-      </button>
+      {/* Play/Pause — tydlig knapp med nuläge + action */}
+      <div className="flex items-center gap-2">
+        {/* Nuläges-indikator */}
+        <div className={`flex items-center gap-1.5 text-xs font-mono font-bold ${state.running ? 'text-green-400' : 'text-slate-500'}`}>
+          <span className={`w-2 h-2 rounded-full ${state.running ? 'bg-green-400 animate-pulse' : 'bg-slate-600'}`} />
+          {state.running ? 'IGÅNG' : 'PAUSAD'}
+        </div>
+        <button
+          onClick={onToggleRunning}
+          className={`
+            flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-2 font-bold text-xs
+            transition-all duration-150 active:scale-95
+            ${state.running
+              ? 'bg-slate-800 border-slate-500 text-slate-200 hover:bg-slate-700 hover:border-slate-400'
+              : 'bg-green-600 border-green-400 text-white hover:bg-green-500 shadow-lg shadow-green-900/50'
+            }
+          `}
+        >
+          {state.running ? '⏸ Pausa' : '▶ Starta'}
+        </button>
+      </div>
 
       {/* Time speed */}
       <div className="flex items-center gap-1">
