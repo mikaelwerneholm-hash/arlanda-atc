@@ -129,12 +129,16 @@ function isOutOfBounds(pos: Position): boolean {
   return pos.x < -50 || pos.x > 1050 || pos.y < -50 || pos.y > 1050;
 }
 
-// Ideal altitude at a given distance from threshold, in feet.
-// Models a gradual 3° descent profile for our coordinate scale.
+// Continuous 3° descent profile: 35 ft per radar-pixel.
+// At 80px (final approach start) = 2800ft ≈ FINAL_APPROACH_ALTITUDE_START.
 function idealAltAtDistance(dist: number): number {
-  if (dist >= 350) return 12000;
-  if (dist >= 200) return Math.round(3000 + (dist - 80) * 38); // ~12000 at 300px, ~7000 at 200px
-  return Math.round(2500 + (dist - 80) * 26);                  // ~5000 at 200px, ~2500 at 80px
+  return Math.max(0, Math.round(dist * 35));
+}
+
+// True if aircraft heading is roughly aligned with the runway (within 40°).
+function isAlignedWithRunway(aircraftHeading: number, headingToThreshold: number): boolean {
+  const diff = Math.abs(normalizeHeading(aircraftHeading - headingToThreshold));
+  return diff < 40 || diff > 320;
 }
 
 function updateArrivalPhase(aircraft: Aircraft, state: SimulationState): Partial<Aircraft> & { newMsg?: string } {
@@ -147,27 +151,33 @@ function updateArrivalPhase(aircraft: Aircraft, state: SimulationState): Partial
   const headingToThreshold = headingBetween(aircraft.position, thresholdPos);
   let updates: Partial<Aircraft> & { newMsg?: string } = {};
 
-  // ── Auto-descent profile ─────────────────────────────────────────────────
-  // Aircraft descends automatically toward landing altitude.
-  // Never raises altitude (respects player if they've already set lower).
-  // Player still controls heading and must give ILS clearance.
-  if (
-    aircraft.phase === 'enroute' ||
-    aircraft.phase === 'descending'
-  ) {
+  // ── Auto-descent: aircraft manages its own altitude all the way to landing ──
+  if (aircraft.phase === 'enroute' || aircraft.phase === 'descending') {
     const ideal = idealAltAtDistance(distToThreshold);
     if (ideal < aircraft.targetAltitude) {
       updates.targetAltitude = ideal;
     }
-    // Auto-reduce speed on approach
-    if (distToThreshold < 250 && aircraft.targetSpeed > 240) {
-      updates.targetSpeed = 220;
-    }
-    if (distToThreshold < 150 && aircraft.targetSpeed > 190) {
-      updates.targetSpeed = 180;
+    // Auto-reduce speed as it gets closer
+    if (distToThreshold < 250 && aircraft.targetSpeed > 240) updates.targetSpeed = 220;
+    if (distToThreshold < 150 && aircraft.targetSpeed > 190) updates.targetSpeed = 180;
+
+    // ── Auto-ILS clearance ───────────────────────────────────────────────────
+    // Grant approach clearance automatically when the aircraft is:
+    //   - close enough (< 145px from threshold)
+    //   - low enough (< 5000ft)
+    //   - roughly aligned with the runway (heading within 40°)
+    // This lets the aircraft complete the full descent to 0 on its own.
+    if (
+      !aircraft.clearedApproach &&
+      distToThreshold < 145 &&
+      aircraft.altitude < 5000 &&
+      isAlignedWithRunway(aircraft.heading, headingToThreshold)
+    ) {
+      updates.clearedApproach = true;
+      updates.newMsg = `${aircraft.callsign}, ILS runway ${activeRunwayArr}, cleared approach.`;
     }
   }
-  // ─────────────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────
 
   switch (aircraft.phase) {
     case 'enroute':
@@ -175,12 +185,11 @@ function updateArrivalPhase(aircraft: Aircraft, state: SimulationState): Partial
       if (aircraft.clearedApproach && distToThreshold < FINAL_APPROACH_DISTANCE * 1.5) {
         updates.phase = 'approach';
         updates.targetHeading = headingToThreshold;
-        updates.targetAltitude = Math.max(3000, aircraft.altitude - 1000);
-        updates.targetSpeed = 180;
-      } else if (!aircraft.clearedApproach && distToThreshold < 130) {
-        // Not cleared — auto-turn away slightly so it doesn't blunder into final
+        updates.targetAltitude = Math.min(aircraft.altitude, FINAL_APPROACH_ALTITUDE_START);
+        updates.targetSpeed = 160;
+      } else if (!aircraft.clearedApproach && distToThreshold < 120) {
+        // Not yet aligned — steer it slightly off to the side to avoid runway
         updates.targetHeading = normalizeHeading(headingToThreshold - 35);
-        updates.targetAltitude = Math.min(aircraft.targetAltitude, 4000);
       }
       break;
     }
